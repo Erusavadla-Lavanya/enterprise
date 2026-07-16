@@ -133,7 +133,9 @@ jobs:
         # Generate the client local typings
         npx prisma generate
         # Apply the schema changes to the live MySQL DB
-        DATABASE_URL="mysql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}" npx prisma db push --accept-data-loss
+        DATABASE_URL="mysql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}?sslaccept=accept_invalid_certs" npx prisma db push --accept-data-loss
+        # Seed the production database
+        DATABASE_URL="mysql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}?sslaccept=accept_invalid_certs" npx prisma db seed
 
     # Step 5: Build Frontend Modules for Production
     - name: Build Frontend Modules
