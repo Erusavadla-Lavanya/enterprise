@@ -1,0 +1,135 @@
+name: CI/CD AWS Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    name: Deploy Backend & Frontend to AWS
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-size: 20
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-south-1
+
+    # Step 1: ECR Initialization (Solves the chicken-and-egg problem)
+    - name: Terraform ECR Init
+      run: |
+        cd deploy/terraform
+        terraform init
+        terraform apply -target=aws_ecr_repository.backend -auto-approve \
+          -var="db_host=${{ secrets.DB_HOST }}" \
+          -var="db_name=${{ secrets.DB_NAME }}" \
+          -var="db_user=${{ secrets.DB_USER }}" \
+          -var="db_password=${{ secrets.DB_PASSWORD }}" \
+          -var="db_port=${{ secrets.DB_PORT }}" \
+          -var="cognito_client_id=${{ secrets.COGNITO_CLIENT_ID }}" \
+          -var="cognito_domain=${{ secrets.COGNITO_DOMAIN }}" \
+          -var="cognito_user_pool_id=${{ secrets.COGNITO_USER_POOL_ID }}"
+
+    # Step 2: Build and Push Backend Docker Image
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build and Push Backend Container Image
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY=hrms-backend-api
+        IMAGE_TAG=latest
+        
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f deploy/Dockerfile.backend .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+    # Step 3: Provision Remaining AWS Resources (Lambda, API Gateway, S3, CloudFront)
+    - name: Terraform Apply Full Stack
+      id: terraform
+      run: |
+        cd deploy/terraform
+        terraform apply -auto-approve \
+          -var="db_host=${{ secrets.DB_HOST }}" \
+          -var="db_name=${{ secrets.DB_NAME }}" \
+          -var="db_user=${{ secrets.DB_USER }}" \
+          -var="db_password=${{ secrets.DB_PASSWORD }}" \
+          -var="db_port=${{ secrets.DB_PORT }}" \
+          -var="cognito_client_id=${{ secrets.COGNITO_CLIENT_ID }}" \
+          -var="cognito_domain=${{ secrets.COGNITO_DOMAIN }}" \
+          -var="cognito_user_pool_id=${{ secrets.COGNITO_USER_POOL_ID }}"
+          
+        # Extract Terraform outputs to environment files for subsequent actions
+        echo "S3_BUCKET=$(terraform output -raw s3_bucket_name)" >> $GITHUB_ENV
+        echo "CF_DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Origins.Items[?Id=='S3-Frontend'].DomainName=='$(terraform output -raw s3_bucket_name).s3-ap-south-1.amazonaws.com'].Id" --output text)" >> $GITHUB_ENV
+
+    # Step 4: Run Prisma Database Migrations
+    - name: Run Prisma Database Migrations
+      run: |
+        cd backend-api
+        # Generate the client local typings
+        npx prisma generate
+        # Apply the schema changes to the live MySQL DB
+        DATABASE_URL="mysql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}" npx prisma db push --accept-data-loss
+
+    # Step 5: Build Frontend Modules for Production
+    - name: Build Frontend Modules
+      env:
+        COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+        COGNITO_DOMAIN: ${{ secrets.COGNITO_DOMAIN }}
+        COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+        COGNITO_REGION: ap-south-1
+      run: |
+        # Build remote components with their respective output paths
+        PUBLIC_PATH=/auth/ npm run build --prefix packages/auth
+        PUBLIC_PATH=/employees/ npm run build --prefix packages/employees
+        PUBLIC_PATH=/payroll/ npm run build --prefix packages/payroll
+        PUBLIC_PATH=/attendance/ npm run build --prefix packages/attendance
+        
+        # Build host container pointing to the CloudFront APIs & module directories
+        API_URL=/api AUTH_URL=/auth/ EMPLOYEES_URL=/employees/ PAYROLL_URL=/payroll/ ATTENDANCE_URL=/attendance/ npm run build --prefix packages/host
+
+    # Step 6: Sync Compiled Frontend Packages to S3
+    - name: Deploy Frontend to S3
+      run: |
+        # Upload host files to the S3 bucket root
+        aws s3 sync packages/host/dist/ s3://${{ env.S3_BUCKET }}/ --delete
+        
+        # Upload remote modules into subfolders
+        aws s3 sync packages/auth/dist/ s3://${{ env.S3_BUCKET }}/auth/ --delete
+        aws s3 sync packages/employees/dist/ s3://${{ env.S3_BUCKET }}/employees/ --delete
+        aws s3 sync packages/payroll/dist/ s3://${{ env.S3_BUCKET }}/payroll/ --delete
+        aws s3 sync packages/attendance/dist/ s3://${{ env.S3_BUCKET }}/attendance/ --delete
+
+    # Step 7: Update Lambda Backend Code
+    - name: Update Lambda Backend Code
+      run: |
+        aws lambda update-function-code \
+          --function-name hrms-backend-api \
+          --image-uri ${{ steps.login-ecr.outputs.registry }}/hrms-backend-api:latest
+
+    # Step 8: Invalidate CloudFront CDN Cache
+    - name: Invalidate CloudFront Cache
+      run: |
+        aws cloudfront create-invalidation \
+          --distribution-id ${{ env.CF_DISTRIBUTION_ID }} \
+          --paths "/*"

@@ -13,7 +13,7 @@ export interface RegisterRequest {
 }
 
 class AuthService {
-  private baseUrl = 'http://localhost:4000';
+  private baseUrl = process.env.API_URL || 'http://localhost:4000';
 
   async login(data: LoginRequest) {
     const res = await fetch(`${this.baseUrl}/auth/login`, {

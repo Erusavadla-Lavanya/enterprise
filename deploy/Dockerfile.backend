@@ -1,0 +1,46 @@
+# Build Stage
+FROM node:20-slim AS builder
+
+WORKDIR /app
+
+# Install openssl for Prisma
+RUN apt-get update -y && apt-get install -y openssl
+
+# Copy package configurations
+COPY backend-api/package*.json ./
+COPY backend-api/prisma ./prisma/
+
+# Install dependencies
+RUN npm ci
+
+# Copy application source
+COPY backend-api/ ./
+
+# Generate Prisma Client and build the application
+RUN npx prisma generate
+RUN npm run build
+
+# Production Stage
+FROM node:20-slim AS runner
+
+WORKDIR /app
+
+# Install openssl for Prisma
+RUN apt-get update -y && apt-get install -y openssl
+
+# Copy AWS Lambda Web Adapter extension
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
+
+# Copy build artifacts and production configuration
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./package.json
+
+ENV PORT=4000
+ENV NODE_ENV=production
+
+EXPOSE 4000
+
+# Start NestJS API
+CMD ["node", "dist/main.js"]
