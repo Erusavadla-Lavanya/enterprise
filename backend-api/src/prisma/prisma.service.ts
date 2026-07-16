@@ -14,7 +14,18 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     super({
       datasources: {
         db: {
-          url: configService.get<string>('DATABASE_URL'),
+          url: (() => {
+            let dbUrl = configService.get<string>('DATABASE_URL');
+            if (!dbUrl && configService.get('DB_HOST')) {
+              const dbUser = configService.get('DB_USER') || 'root';
+              const dbPass = configService.get('DB_PASSWORD') || '';
+              const dbHost = configService.get('DB_HOST') || 'localhost';
+              const dbPort = configService.get('DB_PORT') || '3306';
+              const dbName = configService.get('DB_NAME') || 'enterprise';
+              dbUrl = `mysql://${dbUser}:${dbPass}@${dbHost}:${dbPort}/${dbName}`;
+            }
+            return dbUrl;
+          })(),
         },
       },
     });

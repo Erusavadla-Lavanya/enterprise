@@ -34,18 +34,19 @@ module.exports = {
   ] },
   plugins: [
     new webpack.DefinePlugin({
-      'process.env.COGNITO_DOMAIN': JSON.stringify(env.COGNITO_DOMAIN || ''),
-      'process.env.COGNITO_REGION': JSON.stringify(env.COGNITO_REGION || ''),
-      'process.env.COGNITO_USER_POOL_ID': JSON.stringify(env.COGNITO_USER_POOL_ID || ''),
-      'process.env.COGNITO_CLIENT_ID': JSON.stringify(env.COGNITO_CLIENT_ID || ''),
+      'process.env.COGNITO_DOMAIN': JSON.stringify(process.env.COGNITO_DOMAIN || env.COGNITO_DOMAIN || ''),
+      'process.env.COGNITO_REGION': JSON.stringify(process.env.COGNITO_REGION || env.COGNITO_REGION || ''),
+      'process.env.COGNITO_USER_POOL_ID': JSON.stringify(process.env.COGNITO_USER_POOL_ID || env.COGNITO_USER_POOL_ID || ''),
+      'process.env.COGNITO_CLIENT_ID': JSON.stringify(process.env.COGNITO_CLIENT_ID || env.COGNITO_CLIENT_ID || ''),
+      'process.env.API_URL': JSON.stringify(process.env.API_URL || env.API_URL || ''),
     }),
     new ModuleFederationPlugin({
       name: 'host',
       remotes: {
-        auth: 'auth@http://localhost:3001/remoteEntry.js',
-        employees: 'employees@http://localhost:3002/remoteEntry.js',
-        payroll: 'payroll@http://localhost:3003/remoteEntry.js',
-        attendance: 'attendance@http://localhost:3004/remoteEntry.js'
+        auth: `auth@${process.env.AUTH_URL || 'http://localhost:3001/'}remoteEntry.js`,
+        employees: `employees@${process.env.EMPLOYEES_URL || 'http://localhost:3002/'}remoteEntry.js`,
+        payroll: `payroll@${process.env.PAYROLL_URL || 'http://localhost:3003/'}remoteEntry.js`,
+        attendance: `attendance@${process.env.ATTENDANCE_URL || 'http://localhost:3004/'}remoteEntry.js`
       },
       shared
     }),
