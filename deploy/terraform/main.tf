@@ -28,7 +28,7 @@ resource "aws_ecr_repository" "backend" {
   image_scanning_configuration {
     scan_on_push = true
   }
-  force_destroy = true
+  force_delete = true
 }
 
 # --- Private S3 Bucket for Static Frontend ---

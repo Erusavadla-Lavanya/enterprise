@@ -133,3 +133,13 @@ jobs:
         aws cloudfront create-invalidation \
           --distribution-id ${{ env.CF_DISTRIBUTION_ID }} \
           --paths "/*"
+
+    # Step 9: Display CloudFront URL
+    - name: Display CloudFront URL
+      run: |
+        cd deploy/terraform
+        CF_URL=$(terraform output -raw cloudfront_domain_name)
+        echo "=========================================================="
+        echo "🚀 DEPLOYMENT COMPLETED SUCCESSFULLY!"
+        echo "🔗 CloudFront Frontend Portal: https://$CF_URL"
+        echo "=========================================================="
