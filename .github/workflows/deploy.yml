@@ -38,7 +38,37 @@ jobs:
     - name: Terraform ECR Init
       run: |
         cd deploy/terraform
-        terraform init
+        # Dynamically create state bucket if not present
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        STATE_BUCKET="hrms-tfstate-$AWS_ACCOUNT_ID"
+        
+        if ! aws s3api head-bucket --bucket "$STATE_BUCKET" >/dev/null 2>&1; then
+          echo "Creating Terraform state S3 bucket: $STATE_BUCKET"
+          aws s3api create-bucket --bucket "$STATE_BUCKET" --region ap-south-1 --create-bucket-configuration LocationConstraint=ap-south-1
+          aws s3api put-bucket-versioning --bucket "$STATE_BUCKET" --versioning-configuration Status=Enabled
+        fi
+        
+        # Initialize Terraform with the dynamic backend config
+        terraform init \
+          -backend-config="bucket=$STATE_BUCKET" \
+          -backend-config="key=state/terraform.tfstate" \
+          -backend-config="region=ap-south-1"
+
+        # Check if the ECR repository already exists in AWS; if so, import it to avoid creation conflicts
+        if aws ecr describe-repositories --repository-names hrms-backend-api >/dev/null 2>&1; then
+          echo "ECR repository hrms-backend-api already exists. Importing into Terraform state..."
+          terraform import \
+            -var="db_host=${{ secrets.DB_HOST }}" \
+            -var="db_name=${{ secrets.DB_NAME }}" \
+            -var="db_user=${{ secrets.DB_USER }}" \
+            -var="db_password=${{ secrets.DB_PASSWORD }}" \
+            -var="db_port=${{ secrets.DB_PORT }}" \
+            -var="cognito_client_id=${{ secrets.COGNITO_CLIENT_ID }}" \
+            -var="cognito_domain=${{ secrets.COGNITO_DOMAIN }}" \
+            -var="cognito_user_pool_id=${{ secrets.COGNITO_USER_POOL_ID }}" \
+            aws_ecr_repository.backend hrms-backend-api || true
+        fi
+
         terraform apply -target=aws_ecr_repository.backend -auto-approve \
           -var="db_host=${{ secrets.DB_HOST }}" \
           -var="db_name=${{ secrets.DB_NAME }}" \
@@ -68,6 +98,15 @@ jobs:
       id: terraform
       run: |
         cd deploy/terraform
+        # Re-initialize backend for the new step execution context
+        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        STATE_BUCKET="hrms-tfstate-$AWS_ACCOUNT_ID"
+        terraform init \
+          -backend-config="bucket=$STATE_BUCKET" \
+          -backend-config="key=state/terraform.tfstate" \
+          -backend-config="region=ap-south-1" \
+          -reconfigure
+
         terraform apply -auto-approve \
           -var="db_host=${{ secrets.DB_HOST }}" \
           -var="db_name=${{ secrets.DB_NAME }}" \
