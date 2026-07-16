@@ -138,6 +138,7 @@ jobs:
         COGNITO_DOMAIN: ${{ secrets.COGNITO_DOMAIN }}
         COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
         COGNITO_REGION: ap-south-1
+        API_URL: /api
       run: |
         # Build remote components with their respective output paths
         PUBLIC_PATH=/auth/ npm run build --prefix packages/auth
@@ -146,7 +147,7 @@ jobs:
         PUBLIC_PATH=/attendance/ npm run build --prefix packages/attendance
         
         # Build host container pointing to the CloudFront APIs & module directories
-        API_URL=/api AUTH_URL=/auth/ EMPLOYEES_URL=/employees/ PAYROLL_URL=/payroll/ ATTENDANCE_URL=/attendance/ npm run build --prefix packages/host
+        AUTH_URL=/auth/ EMPLOYEES_URL=/employees/ PAYROLL_URL=/payroll/ ATTENDANCE_URL=/attendance/ npm run build --prefix packages/host
 
     # Step 6: Sync Compiled Frontend Packages to S3
     - name: Deploy Frontend to S3

@@ -19,7 +19,7 @@ const applyTenantTheme = async (userObj?: any) => {
       domain = 'acme.com';
     }
 
-    const response = await fetch(`${process.env.API_URL || 'http://localhost:4000'}/company/settings/theme?domain=${domain}`);
+    const response = await fetch(`${process.env.API_URL || 'http://localhost:4000/api'}/company/settings/theme?domain=${domain}`);
     if (response.ok) {
       const theme = await response.json();
       const root = document.documentElement;
@@ -141,7 +141,7 @@ function MainLayout() {
   const handleSignOut = async () => {
     sessionStorage.setItem('hrms.loggedOut', 'true');
     try {
-      await fetch(`${process.env.API_URL || 'http://localhost:4000'}/auth/logout`, {
+      await fetch(`${process.env.API_URL || 'http://localhost:4000/api'}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
