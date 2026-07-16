@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { PrismaService } from './prisma/prisma.service';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -13,6 +14,16 @@ async function bootstrap() {
     credentials: true,
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  
+  // Database connection verification test on startup
+  const prisma = app.get(PrismaService);
+  try {
+    await prisma.$connect();
+    console.log('✅ Database connection test successful!');
+  } catch (err: any) {
+    console.error('❌ Database connection test failed on startup:', err.message || err);
+  }
+
   await app.listen(process.env.PORT ?? 4000);
 }
 
