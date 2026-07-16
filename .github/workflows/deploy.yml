@@ -119,7 +119,7 @@ jobs:
           
         # Extract Terraform outputs to environment files for subsequent actions
         echo "S3_BUCKET=$(terraform output -raw s3_bucket_name)" >> $GITHUB_ENV
-        echo "CF_DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Origins.Items[?Id=='S3-Frontend'].DomainName=='$(terraform output -raw s3_bucket_name).s3-ap-south-1.amazonaws.com'].Id" --output text)" >> $GITHUB_ENV
+        echo "CF_DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_ENV
 
     # Step 4: Run Prisma Database Migrations
     - name: Run Prisma Database Migrations

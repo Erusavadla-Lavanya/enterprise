@@ -22,3 +22,8 @@ output "lambda_function_name" {
   value       = aws_lambda_function.backend.function_name
   description = "Name of the backend Lambda function"
 }
+
+output "cloudfront_distribution_id" {
+  value       = aws_cloudfront_distribution.cdn.id
+  description = "ID of the CloudFront CDN distribution"
+}
