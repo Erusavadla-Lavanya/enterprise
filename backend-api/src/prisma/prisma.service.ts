@@ -22,7 +22,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
               const dbHost = configService.get('DB_HOST') || 'localhost';
               const dbPort = configService.get('DB_PORT') || '3306';
               const dbName = configService.get('DB_NAME') || 'enterprise';
-              dbUrl = `mysql://${dbUser}:${dbPass}@${dbHost}:${dbPort}/${dbName}`;
+              
+              let queryParams = '';
+              if (dbHost.includes('aivencloud.com') || dbHost.includes('amazonaws.com') || dbHost.includes('database.azure.com')) {
+                queryParams = '?sslaccept=accept_invalid_certs';
+              }
+              dbUrl = `mysql://${dbUser}:${dbPass}@${dbHost}:${dbPort}/${dbName}${queryParams}`;
             }
             return dbUrl;
           })(),
