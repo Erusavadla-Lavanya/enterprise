@@ -15,6 +15,7 @@ RUN npm ci
 
 # Copy application source
 COPY backend-api/ ./
+RUN rm -f .env
 
 # Generate Prisma Client and build the application
 RUN npx prisma generate

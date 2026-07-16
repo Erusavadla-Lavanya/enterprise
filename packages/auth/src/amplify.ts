@@ -14,12 +14,19 @@ declare global {
 
 const cleanDomain = (process.env.COGNITO_DOMAIN || '').replace(/^https?:\/\//, '');
 
+const getRedirectUri = () => {
+  if (typeof window !== 'undefined' && window.location) {
+    return `${window.location.origin}/`;
+  }
+  return 'http://localhost:3000/';
+};
+
 window.__HRMS_AMPLIFY_CONFIG__ = {
   userPoolId: process.env.COGNITO_USER_POOL_ID || '',
   userPoolClientId: process.env.COGNITO_CLIENT_ID || '',
   cognitoDomain: cleanDomain,
-  redirectSignIn: 'http://localhost:3000/',
-  redirectSignOut: 'http://localhost:3000/',
+  redirectSignIn: getRedirectUri(),
+  redirectSignOut: getRedirectUri(),
 };
 
 const config = window.__HRMS_AMPLIFY_CONFIG__;
