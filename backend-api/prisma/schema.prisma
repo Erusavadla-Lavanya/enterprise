@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id                String         @id @default(uuid())
+  name              String
+  domain            String         @unique
+  isActive          Boolean        @default(true)
+  status            String         @default("active") // "pending" | "active"
+  subscribedModules String         @default("attendance,payroll,leave") // comma-separated list of enabled modules
+  themeSettings     String         @default("{\"primary\":\"#3b82f6\",\"secondary\":\"#1e3a8a\",\"fontFamily\":\"Inter, sans-serif\",\"logoUrl\":\"\"}") // JSON string
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  employees         Employee[]
+  auths             Auth[]
+  tenantModules     TenantModule[]
+}
+
+model Auth {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("employee") // "super_admin" | "tenant_admin" | "employee"
+  tenantId     String?  // null for Super Admin
+  company      Company? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Employee {
+  id           String   @id @default(uuid())
+  employeeCode String   @unique
+  firstName    String
+  lastName     String
+  email        String   @unique
+  department   String?
+  designation  String?
+  joinedAt     DateTime @default(now())
+  tenantId     String
+  company      Company  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Payroll {
+  id          String   @id @default(uuid())
+  employeeId  String
+  period      DateTime
+  grossAmount Float
+  deductions  Float    @default(0)
+  netAmount   Float
+  status      String   @default("draft") // "draft" | "processed" | "paid"
+  tenantId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Attendance {
+  id         String    @id @default(uuid())
+  employeeId String
+  checkIn    DateTime
+  checkOut   DateTime?
+  status     String    @default("present") // "present" | "absent" | "late"
+  notes      String?
+  tenantId   String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Leave {
+  id         String   @id @default(uuid())
+  employeeId String
+  startDate  DateTime
+  endDate    DateTime
+  status     String   @default("pending") // "pending" | "approved" | "rejected"
+  type       String   @default("annual")  // "annual" | "sick" | "casual"
+  tenantId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model SystemLog {
+  id        String   @id @default(uuid())
+  action    String
+  details   String
+  userId    String?
+  tenantId  String?  // Scoped audit logging
+  createdAt DateTime @default(now())
+}
+
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Module {
+  id             String           @id @default(uuid())
+  name           String           @unique // e.g. "payroll"
+  remoteUrl      String           // e.g. "http://localhost:3003/remoteEntry.js"
+  bundleName     String           // e.g. "payroll"
+  exposedModule  String           // e.g. "./App"
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  tenantModules  TenantModule[]
+  rolePermissions RolePermission[]
+}
+
+model TenantModule {
+  id        String   @id @default(uuid())
+  tenantId  String
+  company   Company  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  moduleId  String
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  status    String   @default("active") // "active" | "pending"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, moduleId])
+}
+
+model RolePermission {
+  id         String   @id @default(uuid())
+  role       String   // "super_admin" | "tenant_admin" | "employee"
+  permission String   // "read" | "write" | "admin"
+  moduleId   String
+  module     Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([role, permission, moduleId])
+}

@@ -1,0 +1,1 @@
+{ "name": "@hrms/payroll", "private": true, "version": "0.1.0", "scripts": { "dev": "webpack serve --mode development", "build": "webpack --mode production", "typecheck": "tsc --noEmit" } }

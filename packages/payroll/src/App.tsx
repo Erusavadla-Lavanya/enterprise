@@ -1,0 +1,3 @@
+import './styles.css';
+
+export default function App() { return <div><p className="mb-2 text-sm font-semibold uppercase tracking-wider text-blue-600">Payroll remote</p><h2 className="text-3xl font-bold">Payroll overview</h2><div className="mt-5 grid gap-4 sm:grid-cols-2"><div className="rounded-lg bg-emerald-50 p-5"><p className="text-sm text-emerald-700">Current payroll</p><p className="mt-1 text-2xl font-bold">₹ 12,45,000</p></div><div className="rounded-lg bg-amber-50 p-5"><p className="text-sm text-amber-700">Next processing date</p><p className="mt-1 text-2xl font-bold">31 Jul</p></div></div></div>; }
