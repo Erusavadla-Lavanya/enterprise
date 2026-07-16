@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # HRMS micro-frontends
 
 An npm-workspaces HRMS frontend built with React, TypeScript, Tailwind CSS, and Webpack Module Federation.
@@ -38,3 +39,6 @@ Inject Cognito's Hosted UI details before the host loads. The redirect URI must 
 After Cognito redirects back, the auth remote fetches the session, stores ID and access JWTs in `sessionStorage`, and selects the Employees module in the host shell.
 
 `backend-api/` is intentionally empty and reserved for the NestJS application.
+=======
+# enterprise
+>>>>>>> a12e4a7bfa693a9b1951f93f738d14b866b21202

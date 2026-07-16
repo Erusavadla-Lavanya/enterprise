@@ -19,7 +19,7 @@ window.__HRMS_AMPLIFY_CONFIG__ = {
   userPoolClientId: process.env.COGNITO_CLIENT_ID || '',
   cognitoDomain: cleanDomain,
   redirectSignIn: 'http://localhost:3000/',
-  redirectSignOut: 'http://localhost:3000',
+  redirectSignOut: 'http://localhost:3000/',
 };
 
 const config = window.__HRMS_AMPLIFY_CONFIG__;
