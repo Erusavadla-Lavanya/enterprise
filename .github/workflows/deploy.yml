@@ -54,19 +54,23 @@ jobs:
           -backend-config="key=state/terraform.tfstate" \
           -backend-config="region=ap-south-1"
 
-        # Check if the ECR repository already exists in AWS; if so, import it to avoid creation conflicts
+        # Check if the ECR repository already exists in AWS and is not yet tracked in state; if so, import it to avoid creation conflicts
         if aws ecr describe-repositories --repository-names hrms-backend-api >/dev/null 2>&1; then
-          echo "ECR repository hrms-backend-api already exists. Importing into Terraform state..."
-          terraform import \
-            -var="db_host=${{ secrets.DB_HOST }}" \
-            -var="db_name=${{ secrets.DB_NAME }}" \
-            -var="db_user=${{ secrets.DB_USER }}" \
-            -var="db_password=${{ secrets.DB_PASSWORD }}" \
-            -var="db_port=${{ secrets.DB_PORT }}" \
-            -var="cognito_client_id=${{ secrets.COGNITO_CLIENT_ID }}" \
-            -var="cognito_domain=${{ secrets.COGNITO_DOMAIN }}" \
-            -var="cognito_user_pool_id=${{ secrets.COGNITO_USER_POOL_ID }}" \
-            aws_ecr_repository.backend hrms-backend-api || true
+          if ! terraform state list | grep -q "aws_ecr_repository.backend"; then
+            echo "ECR repository hrms-backend-api exists in AWS but is not in state. Importing..."
+            terraform import \
+              -var="db_host=${{ secrets.DB_HOST }}" \
+              -var="db_name=${{ secrets.DB_NAME }}" \
+              -var="db_user=${{ secrets.DB_USER }}" \
+              -var="db_password=${{ secrets.DB_PASSWORD }}" \
+              -var="db_port=${{ secrets.DB_PORT }}" \
+              -var="cognito_client_id=${{ secrets.COGNITO_CLIENT_ID }}" \
+              -var="cognito_domain=${{ secrets.COGNITO_DOMAIN }}" \
+              -var="cognito_user_pool_id=${{ secrets.COGNITO_USER_POOL_ID }}" \
+              aws_ecr_repository.backend hrms-backend-api || true
+          else
+            echo "ECR repository hrms-backend-api is already managed by Terraform state. Skipping import."
+          fi
         fi
 
         terraform apply -target=aws_ecr_repository.backend -auto-approve \
