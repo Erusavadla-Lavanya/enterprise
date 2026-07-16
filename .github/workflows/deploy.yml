@@ -163,8 +163,10 @@ jobs:
     # Step 7: Update Lambda Backend Code
     - name: Update Lambda Backend Code
       run: |
+        cd deploy/terraform
+        LAMBDA_NAME=$(terraform output -raw lambda_function_name)
         aws lambda update-function-code \
-          --function-name hrms-backend-api \
+          --function-name $LAMBDA_NAME \
           --image-uri ${{ steps.login-ecr.outputs.registry }}/hrms-backend-api:latest
 
     # Step 8: Invalidate CloudFront CDN Cache

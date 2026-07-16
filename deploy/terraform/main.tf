@@ -60,7 +60,7 @@ resource "aws_s3_bucket_public_access_block" "frontend_pab" {
 
 # --- IAM Role for Lambda Backend ---
 resource "aws_iam_role" "lambda_role" {
-  name = "hrms-lambda-execution-role"
+  name = "hrms-lambda-execution-role-${random_id.bucket_suffix.hex}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -85,7 +85,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
 # Note: For initial deployment, we use a placeholder image if ECR is empty.
 # In CI/CD we first target and apply the ECR repo, build/push the image, and then deploy the full stack.
 resource "aws_lambda_function" "backend" {
-  function_name = "hrms-backend-api"
+  function_name = "hrms-backend-api-${random_id.bucket_suffix.hex}"
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.backend.repository_url}:latest"
@@ -154,7 +154,7 @@ resource "aws_lambda_permission" "api_gateway" {
 
 # OAC (Origin Access Control) for private S3 connection
 resource "aws_cloudfront_origin_access_control" "oac" {
-  name                              = "hrms-s3-oac"
+  name                              = "hrms-s3-oac-${random_id.bucket_suffix.hex}"
   description                       = "CloudFront OAC for HRMS Private S3 bucket"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
