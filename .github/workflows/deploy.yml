@@ -16,7 +16,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-size: 20
+        node-version: 20
         cache: 'npm'
 
     - name: Install dependencies
@@ -25,7 +25,7 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
-        terraform_version: 1.6.0
+        terraform_version: 1.9.2
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
