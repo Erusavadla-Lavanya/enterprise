@@ -48,6 +48,10 @@ export default function App() {
         // 1. Try to recover redirect session from Cognito
         const cognitoSession = await restoreRedirectSession();
         if (cognitoSession) {
+          try {
+            window.history.replaceState({}, document.title, window.location.origin + '/');
+          } catch (e) {}
+
           const decoded = decodeJwt(cognitoSession.idToken);
           const email = decoded?.email;
           if (email) {
@@ -63,8 +67,12 @@ export default function App() {
       } catch (err: any) {
         console.error("Cognito Redirect Authentication failed:", err);
         const errMsg = err.message || "";
+        try {
+          window.history.replaceState({}, document.title, window.location.origin + '/');
+        } catch (e) {}
+
         if (errMsg.includes("User is not authorized")) {
-          window.location.href = '/unauthorized';
+          window.dispatchEvent(new CustomEvent("hrms:auth-unauthorized"));
         } else {
           window.dispatchEvent(
             new CustomEvent("hrms:auth-error", {

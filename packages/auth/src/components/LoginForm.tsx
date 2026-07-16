@@ -46,13 +46,6 @@ export default function LoginForm({
       setLoading(true);
       const user = await AuthService.login({ email, password });
       console.log("Login Successful", user);
-      if (user.role === 'super_admin') {
-        window.location.href = '/admin/dashboard';
-      } else if (user.role === 'tenant_admin') {
-        window.location.href = '/company/dashboard';
-      } else {
-        window.location.href = '/employee/home';
-      }
     } catch (err: any) {
       setError(err.message || "Unable to login");
     } finally {

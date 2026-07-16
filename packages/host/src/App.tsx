@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import SuperAdmin from './pages/SuperAdmin';
 import TenantAdmin from './pages/TenantAdmin';
 import EmployeeDashboard from './pages/EmployeeDashboard';
@@ -114,6 +114,11 @@ function MainLayout() {
       window.location.href = '/login';
     };
 
+    const handleUnauthorized = () => {
+      console.log('Host: Received hrms:auth-unauthorized event');
+      navigate('/unauthorized');
+    };
+
     const handleModulesUpdated = () => {
       const storedModules = sessionStorage.getItem('hrms.modules') || '';
       console.log('Host: Modules updated event, new list:', storedModules);
@@ -122,11 +127,13 @@ function MainLayout() {
 
     window.addEventListener('hrms:auth-session', handleAuthSession);
     window.addEventListener('hrms:auth-logout', handleLogout);
+    window.addEventListener('hrms:auth-unauthorized', handleUnauthorized);
     window.addEventListener('hrms:modules-updated', handleModulesUpdated);
 
     return () => {
       window.removeEventListener('hrms:auth-session', handleAuthSession);
       window.removeEventListener('hrms:auth-logout', handleLogout);
+      window.removeEventListener('hrms:auth-unauthorized', handleUnauthorized);
       window.removeEventListener('hrms:modules-updated', handleModulesUpdated);
     };
   }, [navigate]);
@@ -169,7 +176,10 @@ function MainLayout() {
                 <Lock className="mx-auto text-rose-500 h-16 w-16" />
                 <h1 className="text-2xl font-bold text-slate-800">Access Denied</h1>
                 <p className="text-slate-500 text-sm font-semibold text-rose-600">You are not allowed to visit this portal. Contact Admin.</p>
-                <button onClick={() => navigate('/login')} className="bg-primary text-white font-semibold py-2 px-4 rounded-lg w-full transition hover:bg-secondary">
+                <button onClick={() => {
+                  sessionStorage.setItem('hrms.loggedOut', 'true');
+                  navigate('/login');
+                }} className="bg-primary text-white font-semibold py-2 px-4 rounded-lg w-full transition hover:bg-secondary">
                   Back to Login
                 </button>
               </div>
@@ -462,8 +472,8 @@ function ProtectedRoute({ allowedRoles, module, children }: ProtectedRouteProps)
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <MemoryRouter>
       <MainLayout />
-    </BrowserRouter>
+    </MemoryRouter>
   );
 }
