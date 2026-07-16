@@ -86,6 +86,7 @@ jobs:
     - name: Run Prisma Database Migrations
       run: |
         cd backend-api
+        npm ci
         # Generate the client local typings
         npx prisma generate
         # Apply the schema changes to the live MySQL DB
