@@ -34,14 +34,6 @@ model Auth {
   lastLoginAt  DateTime? // optional timestamp of last successful login
 }
 
-  email        String   @unique
-  passwordHash String
-  role         String   @default("employee") // "super_admin" | "tenant_admin" | "employee"
-  tenantId     String?  // null for Super Admin
-  company      Company? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
 
 model Employee {
   id           String   @id @default(uuid())
