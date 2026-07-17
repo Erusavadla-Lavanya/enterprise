@@ -14,16 +14,22 @@ export class EmployeesService {
 
   async create(data: CreateEmployeeDto) {
     const { password, ...employeeData } = data as any;
+    employeeData.email = employeeData.email.toLowerCase().trim();
 
     // 1. Create the Employee profile record
-    const employee = await this.prisma.employee.create({ data: employeeData });
+    const employee = await this.prisma.employee.create({
+      data: {
+        ...employeeData,
+        tenantId: '', // Set dynamically by Prisma extension
+      },
+    });
 
     // 2. Create corresponding Auth credentials
     const rawPassword = password || 'Password@123';
     const passwordHash = bcrypt.hashSync(rawPassword, 10);
     await this.prisma.auth.create({
       data: {
-        email: data.email,
+        email: employeeData.email,
         passwordHash,
         role: 'employee',
         tenantId: employee.tenantId,
@@ -31,7 +37,7 @@ export class EmployeesService {
     });
 
     // 3. Provision employee in AWS Cognito if configured
-    await this.authService.cognitoCreateUser(data.email, 'employee', employee.tenantId);
+    await this.authService.cognitoCreateUser(employeeData.email, 'employee', employee.tenantId);
 
     return employee;
   }

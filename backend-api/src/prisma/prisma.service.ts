@@ -16,12 +16,16 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         db: {
           url: (() => {
             let dbUrl = configService.get<string>('DATABASE_URL');
-            if (!dbUrl && configService.get('DB_HOST')) {
-              const dbUser = configService.get('DB_USER') || 'root';
-              const dbPass = configService.get('DB_PASSWORD') || '';
-              const dbHost = configService.get('DB_HOST') || 'localhost';
-              const dbPort = configService.get('DB_PORT') || '3306';
-              const dbName = configService.get('DB_NAME') || 'enterprise';
+            if (dbUrl) {
+              if ((dbUrl.includes('aivencloud.com') || dbUrl.includes('amazonaws.com') || dbUrl.includes('database.azure.com')) && dbUrl.includes('sslaccept=strict')) {
+                dbUrl = dbUrl.replace('sslaccept=strict', 'sslaccept=accept_invalid_certs');
+              }
+            } else if (configService.get('DB_HOST')) {
+              const dbUser = (configService.get<string>('DB_USER') || 'root').trim();
+              const dbPass = (configService.get<string>('DB_PASSWORD') || '').trim();
+              const dbHost = (configService.get<string>('DB_HOST') || 'localhost').trim();
+              const dbPort = (configService.get<string>('DB_PORT') || '3306').trim();
+              const dbName = (configService.get<string>('DB_NAME') || 'enterprise').trim();
               
               let queryParams = '';
               if (dbHost.includes('aivencloud.com') || dbHost.includes('amazonaws.com') || dbHost.includes('database.azure.com')) {
@@ -72,6 +76,15 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         }
       }
     });
+
+    const models = ['auth', 'employee', 'payroll', 'attendance', 'leave', 'company', 'systemLog', 'emailTemplate', 'module', 'tenantModule', 'rolePermission'];
+    for (const model of models) {
+      Object.defineProperty(this, model, {
+        get: () => this._extendedClient[model],
+        configurable: true,
+        enumerable: true,
+      });
+    }
   }
 
   async onModuleInit() {

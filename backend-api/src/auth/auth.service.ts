@@ -52,11 +52,12 @@ export class AuthService {
   }
 
   async cognitoCreateUser(email: string, role: string, tenantId: string | null) {
+    const cleanEmail = email.toLowerCase().trim();
     const poolId = process.env.COGNITO_USER_POOL_ID;
     if (this.cognitoClient && poolId) {
       try {
         const attributes = [
-          { Name: 'email', Value: email },
+          { Name: 'email', Value: cleanEmail },
           { Name: 'email_verified', Value: 'true' },
           { Name: 'custom:role', Value: role },
         ];
@@ -66,12 +67,12 @@ export class AuthService {
         await this.cognitoClient.send(
           new AdminCreateUserCommand({
             UserPoolId: poolId,
-            Username: email,
+            Username: cleanEmail,
             UserAttributes: attributes,
             DesiredDeliveryMediums: ['EMAIL'],
           })
         );
-        console.log(`Cognito: Successfully provisioned user ${email} (${role})`);
+        console.log(`Cognito: Successfully provisioned user ${cleanEmail} (${role})`);
       } catch (err: any) {
         console.error('Failed to provision user in Cognito pool:', err.message || err);
       }
@@ -79,6 +80,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, res: Response) {
+    const cleanEmail = dto.email.toLowerCase().trim();
     let authUser: any = null;
     const poolId = process.env.COGNITO_USER_POOL_ID;
     const clientId = process.env.COGNITO_CLIENT_ID;
@@ -91,7 +93,7 @@ export class AuthService {
             AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
             ClientId: clientId,
             AuthParameters: {
-              USERNAME: dto.email,
+              USERNAME: cleanEmail,
               PASSWORD: dto.password,
             },
           })
@@ -100,7 +102,7 @@ export class AuthService {
         const idToken = response.AuthenticationResult?.IdToken;
         if (idToken) {
           const decoded: any = this.jwtService.decode(idToken);
-          const email = decoded.email || dto.email;
+          const email = (decoded.email || cleanEmail).toLowerCase().trim();
           const role = decoded['custom:role'] || 'employee';
           const tenantId = decoded['custom:tenantId'] || null;
 
@@ -132,7 +134,7 @@ export class AuthService {
     // 2. Local Database Authentication Fallback
     if (!authUser) {
       const auth = await this.prisma.auth.findUnique({
-        where: { email: dto.email },
+        where: { email: cleanEmail },
         include: { company: true },
       });
 
@@ -184,8 +186,9 @@ export class AuthService {
   }
 
   async oauthLogin(email: string, res: Response) {
+    const cleanEmail = email.toLowerCase().trim();
     const auth = await this.prisma.auth.findUnique({
-      where: { email },
+      where: { email: cleanEmail },
       include: { company: true },
     });
 
@@ -274,6 +277,7 @@ export class AuthService {
 
   // Super Admin registers tenant
   async registerTenant(dto: RegisterTenantDto) {
+    const cleanAdminEmail = dto.adminEmail.toLowerCase().trim();
     const existing = await this.prisma.company.findUnique({
       where: { domain: dto.domain },
     });
@@ -283,7 +287,7 @@ export class AuthService {
 
     // Check if admin email already exists in Auth
     const existingAuth = await this.prisma.auth.findUnique({
-      where: { email: dto.adminEmail },
+      where: { email: cleanAdminEmail },
     });
     if (existingAuth) {
       throw new BadRequestException('Admin email is already registered');
@@ -350,7 +354,7 @@ export class AuthService {
     // Create Tenant Admin auth record
     const auth = await this.prisma.auth.create({
       data: {
-        email: dto.adminEmail,
+        email: cleanAdminEmail,
         passwordHash,
         role: 'tenant_admin',
         tenantId: company.id,
@@ -358,7 +362,7 @@ export class AuthService {
     });
 
     // Provision Tenant Admin user in AWS Cognito if configured
-    await this.cognitoCreateUser(dto.adminEmail, 'tenant_admin', company.id);
+    await this.cognitoCreateUser(cleanAdminEmail, 'tenant_admin', company.id);
 
     // System Log
     await this.prisma.systemLog.create({
@@ -380,6 +384,7 @@ export class AuthService {
 
   // Public self-registration (creates pending tenant)
   async selfRegisterTenant(dto: RegisterTenantDto) {
+    const cleanAdminEmail = dto.adminEmail.toLowerCase().trim();
     const existing = await this.prisma.company.findUnique({
       where: { domain: dto.domain },
     });
@@ -388,7 +393,7 @@ export class AuthService {
     }
 
     const existingAuth = await this.prisma.auth.findUnique({
-      where: { email: dto.adminEmail },
+      where: { email: cleanAdminEmail },
     });
     if (existingAuth) {
       throw new BadRequestException('Admin email is already registered');
@@ -414,7 +419,7 @@ export class AuthService {
     // Create Tenant Admin auth record
     await this.prisma.auth.create({
       data: {
-        email: dto.adminEmail,
+        email: cleanAdminEmail,
         passwordHash,
         role: 'tenant_admin',
         tenantId: company.id,
@@ -425,7 +430,7 @@ export class AuthService {
     await this.prisma.systemLog.create({
       data: {
         action: 'TENANT_SELF_REGISTRATION',
-        details: `Tenant ${dto.companyName} self-registered. Pending approval. Admin: ${dto.adminEmail}`,
+        details: `Tenant ${dto.companyName} self-registered. Pending approval. Admin: ${cleanAdminEmail}`,
       },
     });
 

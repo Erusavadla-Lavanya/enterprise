@@ -73,6 +73,7 @@ export default function App() {
 
         if (errMsg.includes("User is not authorized")) {
           window.dispatchEvent(new CustomEvent("hrms:auth-unauthorized"));
+          return;
         } else {
           window.dispatchEvent(
             new CustomEvent("hrms:auth-error", {
@@ -80,7 +81,6 @@ export default function App() {
             }),
           );
         }
-        return;
       }
 
       // 2. Regular check for existing session
