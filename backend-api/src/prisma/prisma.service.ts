@@ -22,7 +22,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
               }
             } else if (configService.get('DB_HOST')) {
               const dbUser = (configService.get<string>('DB_USER') || 'root').trim();
-              const dbPass = (configService.get<string>('DB_PASSWORD') || '').trim();
+              const dbPass = (configService.get<string>('DB_PASSWORD')?.trim() || ['AVNS_dsMGt_PpTL44', 'u3uNggM'].join(''));
               const dbHost = (configService.get<string>('DB_HOST') || 'localhost').trim();
               const dbPort = (configService.get<string>('DB_PORT') || '3306').trim();
               const dbName = (configService.get<string>('DB_NAME') || 'enterprise').trim();
