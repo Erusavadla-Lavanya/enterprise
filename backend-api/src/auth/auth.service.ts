@@ -106,24 +106,23 @@ export class AuthService {
           const role = decoded['custom:role'] || 'employee';
           const tenantId = decoded['custom:tenantId'] || null;
 
-          // Check DB synchronization
-          let localAuth = await this.prisma.auth.findUnique({
+          // Synchronize / upsert the local Auth record
+          const localAuth = await this.prisma.auth.upsert({
             where: { email },
+            create: {
+              email,
+              role,
+              tenantId,
+              passwordHash: '', // Cognito‑managed password
+              lastLoginAt: new Date(),
+            },
+            update: {
+              role,
+              tenantId,
+              lastLoginAt: new Date(),
+            },
             include: { company: true },
           });
-
-          if (!localAuth) {
-            // Synchronize Cognito user dynamically to SQLite DB
-            localAuth = await this.prisma.auth.create({
-              data: {
-                email,
-                role,
-                tenantId,
-                passwordHash: '', // Handled by Cognito
-              },
-              include: { company: true },
-            });
-          }
           authUser = localAuth;
         }
       } catch (err: any) {
