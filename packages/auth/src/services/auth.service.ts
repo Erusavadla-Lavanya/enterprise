@@ -102,9 +102,33 @@ class AuthService {
   }
 
   async googleLogin() {
-    await signInWithRedirect({
-      provider: 'Google',
+    // Re-configure Amplify with the correct current origin right before redirecting
+    // This ensures the redirect_uri matches whether running on localhost or CloudFront
+    const { Amplify } = await import('aws-amplify');
+    const currentOrigin = window.location.origin;
+    const cognitoClientId = process.env.COGNITO_CLIENT_ID || '379s1pachcs1mnnv4rv6m2k2m5';
+    const cognitoUserPoolId = process.env.COGNITO_USER_POOL_ID || 'ap-south-1_b5vYsi7ss';
+    const cognitoDomain = (process.env.COGNITO_DOMAIN || 'https://ap-south-1b5vysi7ss.auth.ap-south-1.amazoncognito.com').replace(/^https?:\/\//, '');
+
+    Amplify.configure({
+      Auth: {
+        Cognito: {
+          userPoolId: cognitoUserPoolId,
+          userPoolClientId: cognitoClientId,
+          loginWith: {
+            oauth: {
+              domain: cognitoDomain,
+              scopes: ['openid', 'email', 'profile'],
+              redirectSignIn: [`${currentOrigin}/`],
+              redirectSignOut: [`${currentOrigin}/`],
+              responseType: 'code',
+            },
+          },
+        },
+      },
     });
+
+    await signInWithRedirect({ provider: 'Google' });
   }
 
   async oauthLogin(email: string) {

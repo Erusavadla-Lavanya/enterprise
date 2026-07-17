@@ -169,8 +169,8 @@ export class AuthService {
     // Set cookie
     res.cookie('access_token', token, {
       httpOnly: true,
-      secure: false, // Set true in production with HTTPS
-      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production', // Secure on HTTPS (CloudFront)
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin HTTPS cookies
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
 
@@ -216,8 +216,8 @@ export class AuthService {
     // Set cookie
     res.cookie('access_token', token, {
       httpOnly: true,
-      secure: false, // Set true in production with HTTPS
-      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production', // Secure on HTTPS (CloudFront)
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-origin HTTPS cookies
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
 

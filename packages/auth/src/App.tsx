@@ -23,38 +23,45 @@ const cleanDomain = (process.env.COGNITO_DOMAIN || '').replace(/^https?:\/\//, '
 
 const getRedirectUri = () => {
   if (typeof window !== 'undefined' && window.location) {
+    // Always use the current page origin so it works on both localhost and CloudFront
     return `${window.location.origin}/`;
   }
-  return 'http://localhost:3000/';
+  return 'https://d1y94t9s65kl0a.cloudfront.net/';
 };
 
-window.__HRMS_AMPLIFY_CONFIG__ = {
-  userPoolId: process.env.COGNITO_USER_POOL_ID || '',
-  userPoolClientId: process.env.COGNITO_CLIENT_ID || '',
-  cognitoDomain: cleanDomain,
-  redirectSignIn: getRedirectUri(),
-  redirectSignOut: getRedirectUri(),
-};
+const configureAmplify = () => {
+  const redirectUri = getRedirectUri();
+  window.__HRMS_AMPLIFY_CONFIG__ = {
+    userPoolId: process.env.COGNITO_USER_POOL_ID || '',
+    userPoolClientId: process.env.COGNITO_CLIENT_ID || '',
+    cognitoDomain: cleanDomain,
+    redirectSignIn: redirectUri,
+    redirectSignOut: redirectUri,
+  };
 
-const config = window.__HRMS_AMPLIFY_CONFIG__;
+  const config = window.__HRMS_AMPLIFY_CONFIG__;
 
-Amplify.configure({
-  Auth: {
-    Cognito: {
-      userPoolId: config.userPoolId,
-      userPoolClientId: config.userPoolClientId,
-      loginWith: {
-        oauth: {
-          domain: config.cognitoDomain,
-          scopes: ['openid', 'email'],
-          redirectSignIn: [config.redirectSignIn],
-          redirectSignOut: [config.redirectSignOut],
-          responseType: 'code',
+  Amplify.configure({
+    Auth: {
+      Cognito: {
+        userPoolId: config.userPoolId,
+        userPoolClientId: config.userPoolClientId,
+        loginWith: {
+          oauth: {
+            domain: config.cognitoDomain,
+            scopes: ['openid', 'email', 'profile'],
+            redirectSignIn: [config.redirectSignIn],
+            redirectSignOut: [config.redirectSignOut],
+            responseType: 'code',
+          },
         },
       },
     },
-  },
-});
+  });
+};
+
+// Configure Amplify eagerly on module load
+configureAmplify();
 
 type AuthPage = "login" | "register" | "forgot-password";
 
