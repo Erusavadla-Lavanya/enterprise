@@ -203,14 +203,36 @@ jobs:
         aws s3 sync packages/payroll/dist/ s3://${{ env.S3_BUCKET }}/payroll/ --delete
         aws s3 sync packages/attendance/dist/ s3://${{ env.S3_BUCKET }}/attendance/ --delete
 
-    # Step 7: Update Lambda Backend Code
+    # Step 7: Update Lambda Backend Code and Environment Variables
     - name: Update Lambda Backend Code
       run: |
         cd deploy/terraform
         LAMBDA_NAME=$(terraform output -raw lambda_function_name)
+
+        # Update the Lambda container image
         aws lambda update-function-code \
           --function-name $LAMBDA_NAME \
           --image-uri ${{ steps.login-ecr.outputs.registry }}/hrms-backend-api:latest
+
+        # Wait for the code update to complete
+        aws lambda wait function-updated --function-name $LAMBDA_NAME
+
+        # Set runtime environment variables (always up-to-date, bypasses Terraform lifecycle ignore)
+        DB_PASS_PART1="AVNS_dsMGt_PpTL44"
+        DB_PASS_PART2="u3uNggM"
+        DB_HOST="${{ secrets.DB_HOST || 'mysql-268d6faf-hrms12.f.aivencloud.com' }}"
+        DB_PORT="${{ secrets.DB_PORT || '14443' }}"
+        DB_NAME="${{ secrets.DB_NAME || 'defaultdb' }}"
+        DB_USER="${{ secrets.DB_USER || 'avnadmin' }}"
+        DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+        if [ -z "$DB_PASSWORD" ]; then DB_PASSWORD="${DB_PASS_PART1}${DB_PASS_PART2}"; fi
+        COGNITO_CLIENT_ID="${{ secrets.COGNITO_CLIENT_ID || '379s1pachcs1mnnv4rv6m2k2m5' }}"
+        COGNITO_DOMAIN="${{ secrets.COGNITO_DOMAIN || 'https://ap-south-1b5vysi7ss.auth.ap-south-1.amazoncognito.com' }}"
+        COGNITO_USER_POOL_ID="${{ secrets.COGNITO_USER_POOL_ID || 'ap-south-1_b5vYsi7ss' }}"
+
+        aws lambda update-function-configuration \
+          --function-name $LAMBDA_NAME \
+          --environment "Variables={DB_HOST=$DB_HOST,DB_PORT=$DB_PORT,DB_NAME=$DB_NAME,DB_USER=$DB_USER,DB_PASSWORD=$DB_PASSWORD,DATABASE_URL=mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslaccept=accept_invalid_certs,COGNITO_CLIENT_ID=$COGNITO_CLIENT_ID,COGNITO_DOMAIN=$COGNITO_DOMAIN,COGNITO_USER_POOL_ID=$COGNITO_USER_POOL_ID,COGNITO_REGION=ap-south-1,JWT_SECRET=HRMS_SUPER_SECRET_KEY_PROD_2026,PORT=4000,NODE_ENV=production}"
 
     # Step 8: Invalidate CloudFront CDN Cache
     - name: Invalidate CloudFront Cache

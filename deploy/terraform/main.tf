@@ -99,10 +99,12 @@ resource "aws_lambda_function" "backend" {
       DB_USER              = var.db_user
       DB_PASSWORD          = var.db_password
       DB_PORT              = var.db_port
+      DATABASE_URL         = "mysql://${var.db_user}:${var.db_password}@${var.db_host}:${var.db_port}/${var.db_name}?sslaccept=accept_invalid_certs"
       COGNITO_CLIENT_ID    = var.cognito_client_id
       COGNITO_DOMAIN       = var.cognito_domain
       COGNITO_USER_POOL_ID = var.cognito_user_pool_id
       COGNITO_REGION       = var.cognito_region
+      JWT_SECRET           = "HRMS_SUPER_SECRET_KEY_PROD_2026"
       PORT                 = "4000"
       NODE_ENV             = "production"
     }
