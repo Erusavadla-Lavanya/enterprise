@@ -97,7 +97,12 @@ export default function SuperAdmin() {
     setTempCredentials(null);
 
     if (!companyName.trim() || !domain.trim() || !adminEmail.trim()) {
-      setError('Please fill in all fields.');
+      setError('Please fill in all required fields (Company Name, Domain, Admin Email).');
+      return;
+    }
+
+    if (password && password.length < 6) {
+      setError('Password must be at least 6 characters, or leave it blank to auto-generate one.');
       return;
     }
 
@@ -123,9 +128,12 @@ export default function SuperAdmin() {
       fetchTenants();
       loadStatsAndData();
     } catch (err: any) {
-      setError(err.message || 'Failed to register tenant.');
+      // Show full validation message from server if available
+      const msg = err.message || 'Failed to register tenant.';
+      setError(msg);
     }
   };
+
 
   const handleToggleTenant = async (id: string, currentStatus: boolean) => {
     setError('');

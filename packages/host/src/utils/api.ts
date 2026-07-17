@@ -14,7 +14,10 @@ export async function apiRequest(path: string, options: RequestInit = {}) {
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || 'Request failed');
+    const message = Array.isArray(err.message)
+      ? err.message.join('; ')
+      : (err.message || 'Request failed');
+    throw new Error(message);
   }
 
   return response.json();

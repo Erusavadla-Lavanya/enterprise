@@ -24,6 +24,6 @@ export class RegisterTenantDto {
 
   @IsString()
   @IsOptional()
-  @MinLength(8)
+  @MinLength(6)
   password?: string;
 }
