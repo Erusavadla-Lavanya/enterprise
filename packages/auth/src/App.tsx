@@ -5,7 +5,56 @@ import ForgotPassword from "./pages/ForgotPassword";
 import AuthService from "./services/auth.service";
 import { restoreRedirectSession } from "./session";
 import { signOut } from "aws-amplify/auth";
-import "./amplify";
+import { Amplify } from 'aws-amplify';
+
+declare global {
+  interface Window {
+    __HRMS_AMPLIFY_CONFIG__?: {
+      userPoolId: string;
+      userPoolClientId: string;
+      cognitoDomain: string;
+      redirectSignIn: string;
+      redirectSignOut: string;
+    };
+  }
+}
+
+const cleanDomain = (process.env.COGNITO_DOMAIN || '').replace(/^https?:\/\//, '');
+
+const getRedirectUri = () => {
+  if (typeof window !== 'undefined' && window.location) {
+    return `${window.location.origin}/`;
+  }
+  return 'http://localhost:3000/';
+};
+
+window.__HRMS_AMPLIFY_CONFIG__ = {
+  userPoolId: process.env.COGNITO_USER_POOL_ID || '',
+  userPoolClientId: process.env.COGNITO_CLIENT_ID || '',
+  cognitoDomain: cleanDomain,
+  redirectSignIn: getRedirectUri(),
+  redirectSignOut: getRedirectUri(),
+};
+
+const config = window.__HRMS_AMPLIFY_CONFIG__;
+
+Amplify.configure({
+  Auth: {
+    Cognito: {
+      userPoolId: config.userPoolId,
+      userPoolClientId: config.userPoolClientId,
+      loginWith: {
+        oauth: {
+          domain: config.cognitoDomain,
+          scopes: ['openid', 'email'],
+          redirectSignIn: [config.redirectSignIn],
+          redirectSignOut: [config.redirectSignOut],
+          responseType: 'code',
+        },
+      },
+    },
+  },
+});
 
 type AuthPage = "login" | "register" | "forgot-password";
 
