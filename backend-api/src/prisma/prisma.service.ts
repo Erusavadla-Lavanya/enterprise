@@ -22,11 +22,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
               }
             } else if (configService.get('DB_HOST')) {
               const dbUser = (configService.get<string>('DB_USER') || 'root').trim();
-              const dbPass = (configService.get<string>('DB_PASSWORD')?.trim() || ['AVNS_dsMGt_PpTL44', 'u3uNggM'].join(''));
+              const dbPass = (configService.get<string>('DB_PASSWORD')?.trim() || 'root');
               const dbHost = (configService.get<string>('DB_HOST') || 'localhost').trim();
               const dbPort = (configService.get<string>('DB_PORT') || '3306').trim();
               const dbName = (configService.get<string>('DB_NAME') || 'enterprise').trim();
-              
+
               let queryParams = '';
               if (dbHost.includes('aivencloud.com') || dbHost.includes('amazonaws.com') || dbHost.includes('database.azure.com')) {
                 queryParams = '?sslaccept=accept_invalid_certs';
@@ -43,10 +43,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         $allModels: {
           async $allOperations({ model, operation, args, query }) {
             const tenantId = tenantContext.getTenantId();
-            
+
             // Models that are tenant-scoped
             const tenantScopedModels = ['Employee', 'Payroll', 'Attendance', 'Leave', 'Auth'];
-            
+
             if (tenantId && tenantScopedModels.includes(model)) {
               const anyArgs = args as any;
               // Apply dynamic filter for isolation

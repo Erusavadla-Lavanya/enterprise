@@ -83,7 +83,9 @@ const decodeJwt = (token: string) => {
 };
 
 export default function App() {
-  const [page, setPage] = useState<AuthPage>("login");
+  const [page, setPage] = useState<AuthPage>(
+    window.location.pathname.includes('/register') ? 'register' : 'login'
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -106,7 +108,7 @@ export default function App() {
         if (cognitoSession) {
           try {
             window.history.replaceState({}, document.title, window.location.origin + '/');
-          } catch (e) {}
+          } catch (e) { }
 
           const decoded = decodeJwt(cognitoSession.idToken);
           const email = decoded?.email;
@@ -125,7 +127,7 @@ export default function App() {
         const errMsg = err.message || "";
         try {
           window.history.replaceState({}, document.title, window.location.origin + '/');
-        } catch (e) {}
+        } catch (e) { }
 
         if (errMsg.includes("User is not authorized")) {
           window.dispatchEvent(new CustomEvent("hrms:auth-unauthorized"));

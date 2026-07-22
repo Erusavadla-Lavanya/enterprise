@@ -10,6 +10,7 @@ export interface RegisterRequest {
   domain: string;
   adminEmail: string;
   password?: string;
+  subscriptionPlan?: string;
 }
 
 class AuthService {

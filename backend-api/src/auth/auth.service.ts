@@ -124,33 +124,61 @@ export class AuthService {
             include: { company: true },
           });
           authUser = localAuth;
+          await this.redisService.set(`user:${email}`, JSON.stringify(localAuth));
         }
       } catch (err: any) {
         console.warn('Cognito login attempt bypassed/failed. Error:', err.message || err);
       }
     }
 
-    // 2. Local Database Authentication Fallback
+    // 2. Redis & Local Database Authentication Fallback
     if (!authUser) {
-      const auth = await this.prisma.auth.findUnique({
-        where: { email: cleanEmail },
-        include: { company: true },
-      });
-
-      if (!auth) {
-        throw new UnauthorizedException('Invalid credentials');
+      // First try fetching from Redis
+      const cachedUserStr = await this.redisService.get(`user:${cleanEmail}`);
+      if (cachedUserStr) {
+        try {
+          const cachedAuth = JSON.parse(cachedUserStr);
+          if (cachedAuth) {
+            // Check tenant suspension
+            if (cachedAuth.company && !cachedAuth.company.isActive) {
+              throw new UnauthorizedException('Organization has been suspended');
+            }
+            const isPasswordValid = bcrypt.compareSync(dto.password, cachedAuth.passwordHash);
+            if (isPasswordValid) {
+              authUser = cachedAuth;
+              console.log(`Auth: Login authenticated successfully from Redis cache for ${cleanEmail}`);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to parse cached user or verify password from Redis:', err);
+        }
       }
 
-      // Check tenant suspension
-      if (auth.company && !auth.company.isActive) {
-        throw new UnauthorizedException('Organization has been suspended');
-      }
+      if (!authUser) {
+        const auth = await this.prisma.auth.findUnique({
+          where: { email: cleanEmail },
+          include: { company: true },
+        });
 
-      const isPasswordValid = bcrypt.compareSync(dto.password, auth.passwordHash);
-      if (!isPasswordValid) {
-        throw new UnauthorizedException('Invalid credentials');
+        if (!auth) {
+          throw new UnauthorizedException('Invalid credentials');
+        }
+
+        // Check tenant suspension
+        if (auth.company && !auth.company.isActive) {
+          throw new UnauthorizedException('Organization has been suspended');
+        }
+
+        const isPasswordValid = bcrypt.compareSync(dto.password, auth.passwordHash);
+        if (!isPasswordValid) {
+          throw new UnauthorizedException('Invalid credentials');
+        }
+        authUser = auth;
+
+        // Cache user details in Redis
+        await this.redisService.set(`user:${cleanEmail}`, JSON.stringify(auth));
+        console.log(`Auth: Login authenticated successfully from Database for ${cleanEmail} (cached in Redis)`);
       }
-      authUser = auth;
     }
 
     const permissions = this.getPermissions(authUser.role);
@@ -360,6 +388,9 @@ export class AuthService {
       },
     });
 
+    // Cache the tenant admin in Redis
+    await this.redisService.set(`user:${cleanAdminEmail}`, JSON.stringify({ ...auth, company }));
+
     // Provision Tenant Admin user in AWS Cognito if configured
     await this.cognitoCreateUser(cleanAdminEmail, 'tenant_admin', company.id);
 
@@ -403,6 +434,22 @@ export class AuthService {
     }
 
     const passwordHash = bcrypt.hashSync(dto.password, 10);
+    const plan = dto.subscriptionPlan || 'basic';
+
+    let subscribedList = 'attendance,leave';
+    if (plan === 'premium') {
+      subscribedList = 'attendance,payroll,leave';
+    } else if (plan === 'standard' || plan === 'subscription') {
+      subscribedList = 'attendance,leave,payroll';
+    }
+
+    const themeSettings = JSON.stringify({
+      primary: '#3b82f6',
+      secondary: '#1e3a8a',
+      fontFamily: 'Inter, sans-serif',
+      logoUrl: '',
+      plan,
+    });
 
     // Create company record with pending status
     const company = await this.prisma.company.create({
@@ -411,12 +458,42 @@ export class AuthService {
         domain: dto.domain,
         isActive: true, // Allow log-in or guard will handle pending
         status: 'pending',
-        subscribedModules: 'attendance,leave', // default basic modules
+        subscribedModules: subscribedList,
+        themeSettings,
       },
     });
 
+    // Populate TenantModules catalog for the tenant
+    const allModules = await this.prisma.module.findMany();
+    for (const mod of allModules) {
+      let modStatus = 'pending';
+      const mName = mod.name.toLowerCase();
+
+      if (mName === 'auth' || mName === 'employees') {
+        modStatus = 'active';
+      } else if (plan === 'premium') {
+        modStatus = 'active';
+      } else if (plan === 'standard' || plan === 'subscription') {
+        if (mName === 'attendance' || mName === 'leave' || mName === 'payroll') {
+          modStatus = 'active';
+        }
+      } else if (plan === 'basic') {
+        if (mName === 'attendance' || mName === 'leave') {
+          modStatus = 'active';
+        }
+      }
+
+      await this.prisma.tenantModule.create({
+        data: {
+          tenantId: company.id,
+          moduleId: mod.id,
+          status: modStatus,
+        }
+      });
+    }
+
     // Create Tenant Admin auth record
-    await this.prisma.auth.create({
+    const auth = await this.prisma.auth.create({
       data: {
         email: cleanAdminEmail,
         passwordHash,
@@ -425,11 +502,17 @@ export class AuthService {
       },
     });
 
+    // Cache the tenant admin in Redis
+    await this.redisService.set(`user:${cleanAdminEmail}`, JSON.stringify({ ...auth, company }));
+
+    // Provision User in Cognito if configured
+    await this.cognitoCreateUser(cleanAdminEmail, 'tenant_admin', company.id);
+
     // System Log
     await this.prisma.systemLog.create({
       data: {
         action: 'TENANT_SELF_REGISTRATION',
-        details: `Tenant ${dto.companyName} self-registered. Pending approval. Admin: ${cleanAdminEmail}`,
+        details: `Tenant ${dto.companyName} self-registered with plan: ${plan}. Pending approval. Admin: ${cleanAdminEmail}`,
       },
     });
 
@@ -456,6 +539,18 @@ export class AuthService {
     if (!isActive) {
       // Invalidate all active JWT tokens for that tenant via Redis
       await this.redisService.set(`tenant_invalidated_at:${id}`, Date.now().toString());
+    }
+
+    // Invalidate user cache for all users belonging to this tenant in Redis
+    try {
+      const tenantAuths = await this.prisma.auth.findMany({
+        where: { tenantId: id },
+      });
+      for (const auth of tenantAuths) {
+        await this.redisService.del(`user:${auth.email}`);
+      }
+    } catch (err) {
+      console.error('Failed to invalidate tenant users from Redis cache:', err);
     }
 
     // System Log

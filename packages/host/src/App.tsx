@@ -12,7 +12,7 @@ const applyTenantTheme = async (userObj?: any) => {
   try {
     let domain = '';
     const loggedInUser = userObj || JSON.parse(sessionStorage.getItem('hrms.user') || 'null');
-    
+
     if (loggedInUser && loggedInUser.email && loggedInUser.role !== 'super_admin') {
       domain = loggedInUser.email.split('@')[1];
     } else {
@@ -111,7 +111,7 @@ function MainLayout() {
       setUser(null);
       setActiveModules([]);
       applyTenantTheme(null);
-      window.location.href = '/login';
+      window.location.href = '/';
     };
 
     const handleUnauthorized = () => {
@@ -152,6 +152,7 @@ function MainLayout() {
   };
 
   const isPublicRoute = ['/login', '/register', '/403', '/unauthorized'].includes(location.pathname);
+
   console.log('Host MainLayout rendering. Path:', location.pathname, 'isPublicRoute:', isPublicRoute, 'User state:', user?.email);
 
   if (isPublicRoute) {

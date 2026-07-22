@@ -43,6 +43,12 @@ export class CompaniesController {
   }
 
   @Roles('tenant_admin')
+  @Patch('upgrade-plan')
+  async upgradePlan(@Body('plan') plan: string) {
+    return this.companiesService.upgradePlan(plan);
+  }
+
+  @Roles('tenant_admin')
   @Get('kpis')
   async getKpis() {
     return this.companiesService.getKpis();

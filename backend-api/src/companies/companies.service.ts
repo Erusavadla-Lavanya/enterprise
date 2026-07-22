@@ -143,4 +143,72 @@ export class CompaniesService {
       subscribedModules: company?.subscribedModules || '',
     };
   }
+
+  async upgradePlan(plan: string) {
+    const tenantId = this.getActiveTenantId();
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: tenantId },
+    });
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+
+    let parsedTheme = {
+      primary: '#3b82f6',
+      secondary: '#1e3a8a',
+      fontFamily: 'Inter, sans-serif',
+      logoUrl: '',
+    };
+    if (company.themeSettings) {
+      try {
+        parsedTheme = JSON.parse(company.themeSettings);
+      } catch (e) {}
+    }
+
+    const updatedTheme = JSON.stringify({ ...parsedTheme, plan });
+
+    let subscribedList = 'attendance,leave';
+    if (plan === 'premium') {
+      subscribedList = 'attendance,payroll,leave';
+    } else if (plan === 'standard') {
+      subscribedList = 'attendance,leave,payroll';
+    }
+
+    const updatedCompany = await this.prisma.company.update({
+      where: { id: tenantId },
+      data: {
+        subscribedModules: subscribedList,
+        themeSettings: updatedTheme,
+      },
+    });
+
+    const allModules = await this.prisma.module.findMany();
+    for (const mod of allModules) {
+      const mName = mod.name.toLowerCase();
+      let status = 'pending';
+      if (mName === 'auth' || mName === 'employees') {
+        status = 'active';
+      } else if (plan === 'premium') {
+        status = 'active';
+      } else if (plan === 'standard') {
+        if (mName === 'attendance' || mName === 'leave' || mName === 'payroll') {
+          status = 'active';
+        }
+      } else if (plan === 'basic') {
+        if (mName === 'attendance' || mName === 'leave') {
+          status = 'active';
+        }
+      }
+
+      await this.prisma.tenantModule.upsert({
+        where: { tenantId_moduleId: { tenantId, moduleId: mod.id } },
+        create: { tenantId, moduleId: mod.id, status },
+        update: { status },
+      });
+    }
+
+    return updatedCompany;
+  }
 }
+
