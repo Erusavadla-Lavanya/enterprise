@@ -90,9 +90,9 @@ export default function App() {
 
   useEffect(() => {
     const initialize = async () => {
-      const justLoggedOut = sessionStorage.getItem('hrms.loggedOut') === 'true';
+      const justLoggedOut = localStorage.getItem('hrms.loggedOut') === 'true';
       if (justLoggedOut) {
-        sessionStorage.removeItem('hrms.loggedOut');
+        localStorage.removeItem('hrms.loggedOut');
         try {
           await signOut();
         } catch (e) {

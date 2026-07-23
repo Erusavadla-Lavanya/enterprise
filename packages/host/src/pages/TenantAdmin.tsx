@@ -480,7 +480,7 @@ export default function TenantAdmin() {
       <div className="flex items-center justify-between border-b pb-5">
         <div>
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <Building className="text-blue-600 h-8 w-8" />
+            <Building className="text-primary h-8 w-8" />
             {companyName || 'Company'} Admin Portal
           </h2>
           <p className="text-slate-500 mt-1">Manage organization directory, subscribe modules and view department analytics.</p>
@@ -568,7 +568,7 @@ export default function TenantAdmin() {
             <h3 className="text-xl font-bold text-slate-900">Company Employee Directory</h3>
             <button 
               onClick={() => setShowAddForm(!showAddForm)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition text-sm shadow"
+              className="bg-primary hover:opacity-90 text-white font-semibold py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition text-sm shadow"
             >
               <Plus size={16} />
               Add New Employee
@@ -651,7 +651,7 @@ export default function TenantAdmin() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button type="submit" className="bg-blue-600 text-white font-semibold py-1.5 px-3 rounded hover:bg-blue-700 transition text-sm">Save Employee</button>
+                <button type="submit" className="bg-primary text-white font-semibold py-1.5 px-3 rounded hover:opacity-90 transition text-sm">Save Employee</button>
                 <button type="button" onClick={() => setShowAddForm(false)} className="border font-semibold py-1.5 px-3 rounded hover:bg-slate-100 transition text-sm">Cancel</button>
               </div>
             </form>
@@ -729,7 +729,7 @@ export default function TenantAdmin() {
                       <div className="flex justify-center gap-1">
                         <button 
                           onClick={() => setEditingEmp(emp)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                          className="p-1.5 text-primary hover:bg-slate-100 rounded transition"
                           title="Edit Employee"
                         >
                           <Edit size={16} />

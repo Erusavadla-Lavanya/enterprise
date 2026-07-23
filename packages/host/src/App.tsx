@@ -106,8 +106,9 @@ function MainLayout() {
 
     const handleLogout = () => {
       console.log('Host: Received hrms:auth-logout event');
-      sessionStorage.removeItem('hrms.user');
-      sessionStorage.removeItem('hrms.modules');
+      sessionStorage.clear();
+      localStorage.clear();
+      localStorage.setItem('hrms.loggedOut', 'true');
       setUser(null);
       setActiveModules([]);
       applyTenantTheme(null);
@@ -139,7 +140,7 @@ function MainLayout() {
   }, [navigate]);
 
   const handleSignOut = async () => {
-    sessionStorage.setItem('hrms.loggedOut', 'true');
+    localStorage.setItem('hrms.loggedOut', 'true');
     try {
       await fetch(`${process.env.API_URL || 'http://localhost:4000/api'}/auth/logout`, {
         method: 'POST',
@@ -178,7 +179,7 @@ function MainLayout() {
                 <h1 className="text-2xl font-bold text-slate-800">Access Denied</h1>
                 <p className="text-slate-500 text-sm font-semibold text-rose-600">You are not allowed to visit this portal. Contact Admin.</p>
                 <button onClick={() => {
-                  sessionStorage.setItem('hrms.loggedOut', 'true');
+                  localStorage.setItem('hrms.loggedOut', 'true');
                   navigate('/login');
                 }} className="bg-primary text-white font-semibold py-2 px-4 rounded-lg w-full transition hover:bg-secondary">
                   Back to Login
@@ -194,18 +195,18 @@ function MainLayout() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col w-full">
       {/* Navbar */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between text-slate-800 shadow-sm select-none">
+      <header className="bg-primary px-6 py-4 flex items-center justify-between text-white shadow-md select-none transition-colors duration-500">
         <h1 className="text-xl font-bold tracking-tight cursor-pointer flex items-center gap-2" onClick={() => navigate('/')}>
-          HRMS <span className="text-primary font-extrabold">Enterprise</span>
+          HRMS <span className="font-extrabold opacity-80">Enterprise</span>
         </h1>
         {user && (
           <div className="flex items-center gap-4 text-sm">
-            <span className="text-slate-600 flex items-center gap-1.5 capitalize bg-slate-100 border border-slate-200 px-3 py-1 rounded-full text-xs font-semibold">
+            <span className="flex items-center gap-1.5 capitalize bg-black/10 border border-white/20 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm">
               {user.role === 'super_admin' ? <Shield size={12} /> : user.role === 'tenant_admin' ? <Building size={12} /> : <User size={12} />}
               {user.role.replace('_', ' ')}
             </span>
-            <span className="text-slate-600 font-medium">{user.email}</span>
-            <button onClick={handleSignOut} className="text-slate-500 hover:text-slate-800 transition flex items-center gap-1 font-semibold">
+            <span className="font-medium text-white/90">{user.email}</span>
+            <button onClick={handleSignOut} className="text-white hover:text-white bg-black/20 hover:bg-black/30 transition flex items-center gap-1.5 font-semibold px-3 py-1.5 rounded-lg shadow-sm">
               <LogOut size={16} />
               Sign Out
             </button>
@@ -217,7 +218,7 @@ function MainLayout() {
       <div className="flex-1 flex flex-col md:flex-row w-full gap-0 overflow-hidden">
         {/* Sidebar Nav */}
         {user && (
-          <nav className="w-full md:w-[260px] flex flex-col gap-1 bg-slate-100 text-slate-850 border-r border-slate-200 min-h-[calc(100vh-68px)] p-5 select-none shadow-sm">
+          <nav className="w-full md:w-[260px] flex flex-col gap-1 bg-white border-r border-slate-200 min-h-[calc(100vh-68px)] p-5 select-none shadow-sm z-10 relative">
             {user.role === 'super_admin' && (
               <>
                 <div className="text-[11px] font-bold text-slate-400 px-3 py-1.5 border-b border-slate-200/60 mb-2 select-none uppercase tracking-wider">Admin Dashboard</div>
