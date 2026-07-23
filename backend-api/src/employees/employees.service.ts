@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
@@ -17,6 +17,20 @@ export class EmployeesService {
   async create(data: CreateEmployeeDto) {
     const { password, ...employeeData } = data as any;
     employeeData.email = employeeData.email.toLowerCase().trim();
+
+    // Check if employee already exists
+    const existingEmployee = await this.prisma.employee.findFirst({
+      where: {
+        OR: [
+          { email: employeeData.email },
+          { employeeCode: employeeData.employeeCode }
+        ]
+      }
+    });
+
+    if (existingEmployee) {
+      throw new BadRequestException('Employee already exists');
+    }
 
     // 1. Create the Employee profile record
     const employee = await this.prisma.employee.create({

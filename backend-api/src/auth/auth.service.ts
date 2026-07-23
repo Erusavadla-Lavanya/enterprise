@@ -341,6 +341,7 @@ export class AuthService {
       data: {
         name: dto.companyName,
         domain: dto.domain,
+        email: cleanAdminEmail,
         isActive: true,
         status: 'active',
         subscribedModules: subscribedList,

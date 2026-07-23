@@ -361,6 +361,7 @@ export default function SuperAdmin() {
                   <tr className="bg-slate-50 border-b border-slate-200">
                     <th className="p-4 font-bold text-slate-700 text-sm">Company Name</th>
                     <th className="p-4 font-bold text-slate-700 text-sm">Domain</th>
+                    <th className="p-4 font-bold text-slate-700 text-sm">Email</th>
                     <th className="p-4 font-bold text-slate-700 text-sm">Modules</th>
                     <th className="p-4 font-bold text-slate-700 text-sm">Approval Status</th>
                     <th className="p-4 font-bold text-slate-700 text-sm">Status</th>
@@ -372,6 +373,7 @@ export default function SuperAdmin() {
                     <tr key={t.id} className="hover:bg-slate-50/80 transition">
                       <td className="p-4 font-medium text-slate-900">{t.name}</td>
                       <td className="p-4 font-mono text-sm text-slate-600">{t.domain}</td>
+                      <td className="p-4 text-sm text-slate-600">{t.email || 'N/A'}</td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-1.5">
                           {t.tenantModules && t.tenantModules.length > 0 ? (

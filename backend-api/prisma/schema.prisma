@@ -13,6 +13,7 @@ model Company {
   domain            String         @unique
   isActive          Boolean        @default(true)
   status            String         @default("active") // "pending" | "active"
+  email             String?
   subscribedModules String         @default("attendance,payroll,leave") // comma-separated list of enabled modules
   themeSettings     String         @default("{\"primary\":\"#3b82f6\",\"secondary\":\"#1e3a8a\",\"fontFamily\":\"Inter, sans-serif\",\"logoUrl\":\"\"}") // JSON string
   createdAt         DateTime       @default(now())

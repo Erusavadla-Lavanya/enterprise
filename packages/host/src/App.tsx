@@ -107,12 +107,11 @@ function MainLayout() {
     const handleLogout = () => {
       console.log('Host: Received hrms:auth-logout event');
       sessionStorage.clear();
-      localStorage.clear();
       localStorage.setItem('hrms.loggedOut', 'true');
       setUser(null);
       setActiveModules([]);
       applyTenantTheme(null);
-      window.location.href = '/';
+      navigate('/login');
     };
 
     const handleUnauthorized = () => {
